@@ -1,0 +1,57 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Oct 10 12:37:37 2016
+
+@author:Ankita Sinha
+"""
+
+import pandas as pd
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.feature_selection import SelectKBest
+from sklearn.cross_validation import StratifiedKFold
+from sklearn.grid_search import GridSearchCV
+from sklearn.ensemble.gradient_boosting import GradientBoostingClassifier
+from sklearn.cross_validation import cross_val_score
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+train = pd.read_csv('train.csv')
+test = pd.read_csv('test.csv')
+print(train.head())
+#data is present as 28 * 28 pixel value
+#1st column is label n next 784 is pixel value unrolled 
+#reading data
+target=train["label"]
+train=train.drop("label",axis=1)
+
+pca = PCA(n_components=50, whiten=True)
+pca.fit(train)
+train = pca.transform(train)
+test = pca.transform(test)
+
+#test_df=test.copy()
+forest = RandomForestClassifier(max_features='sqrt')
+
+parameter_grid = {
+                 'max_depth' : [4,5,6,7,8],
+                 'n_estimators': [200,210,240,250],
+                 'criterion': ['gini','entropy'],
+                 'min_samples_leaf':[1,10,30,20,5,50]
+                 }
+
+cross_validation = StratifiedKFold(target, n_folds=5)
+
+grid_search = GridSearchCV(forest,
+                           param_grid=parameter_grid,
+                           cv=cross_validation)
+
+grid_search.fit(train, target)
+
+print('Best score: {}'.format(grid_search.best_score_))
+print('Best parameters: {}'.format(grid_search.best_params_))
+output = grid_search.predict(test).astype(int)
+submission = pd.DataFrame(output, columns=['Label'], 
+                       index=np.arange(1, 28001))
+submission.to_csv("rf_final.csv")
+
+
